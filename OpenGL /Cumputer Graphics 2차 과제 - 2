@@ -167,5 +167,5 @@ int main(int argc, char** argv) {
 //glScalef(scale, scale, scale) 모델을 scale 배율로 크기 조정
 //case 'w','a','s','d' x,y 축 이동 제어
 //case '+','-' 크기 확대 및 축소
-// rotationAngle 값을 증가시켜 피라므디가 지속적으로 회전하도록 설정
-//glutTimerFunc()를 통해 60F행
+// rotationAngle 값을 증가시켜 피라미드가 지속적으로 회전하도록 설정
+//glutTimerFunc()를 통해 60FPS로 애니메이션 실행
