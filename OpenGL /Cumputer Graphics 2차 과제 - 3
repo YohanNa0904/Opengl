@@ -1,0 +1,123 @@
+#include <GL/glut.h>
+#include <math.h>
+
+// 공의 상태를 저장하는 전역 변수
+GLfloat ballX = 0.0f;   // 공의 X 위치
+GLfloat ballY = 5.0f;   // 공의 Y 위치 (초기 높이)
+GLfloat ballVelocityY = 0.0f; // 공의 Y축 속도
+GLfloat gravity = -9.8f; // 중력 가속도
+GLfloat elasticity = 0.8f; // 탄성 계수 (반발력)
+GLfloat groundY = -1.0f;  // 바닥의 Y 위치
+GLfloat scaleX = 1.0f;    // 공의 X 방향 크기
+GLfloat scaleY = 1.0f;    // 공의 Y 방향 크기
+GLboolean wireframeMode = GL_FALSE; // 와이어프레임 모드 여부
+
+GLfloat timeStep = 0.016f; // 단위 시간 (16ms, 약 60 FPS)
+
+// 화면 초기화
+void InitGL(int width, int height) {
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // 배경색 검은색
+    glEnable(GL_DEPTH_TEST); // 깊이 테스트 활성화
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0f, (GLfloat)width / (GLfloat)height, 1.0f, 100.0f);
+    glMatrixMode(GL_MODELVIEW);
+}
+
+// 화면 크기 조정
+void ReSizeGLScene(int width, int height) {
+    if (height == 0) height = 1;
+    glViewport(0, 0, width, height);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0f, (GLfloat)width / (GLfloat)height, 1.0f, 100.0f);
+    glMatrixMode(GL_MODELVIEW);
+}
+
+// 물리 시뮬레이션 업데이트
+void UpdatePhysics() {
+    ballVelocityY += gravity * timeStep; // 중력 가속도에 따라 속도 변화
+    ballY += ballVelocityY * timeStep;  // 속도에 따라 위치 변화
+
+    // 바닥 충돌 처리
+    if (ballY - scaleY <= groundY) {
+        ballY = groundY + scaleY; // 바닥에 닿은 후 위치 고정
+        ballVelocityY = -ballVelocityY * elasticity; // 반발 속도 설정
+    }
+
+    // 변형 처리 (바닥 충돌 시 좌우로 늘어나고 상하로 줄어듦)
+    if (ballY - scaleY <= groundY) {
+        scaleX = 1.2f; // 좌우로 늘어남
+        scaleY = 0.8f; // 상하로 줄어듦
+    } else {
+        scaleX = 1.0f + 0.1f * fabs(ballVelocityY / 10.0f); // 탄성 변화
+        scaleY = 1.0f - 0.1f * fabs(ballVelocityY / 10.0f); // 탄성 변화
+    }
+}
+
+// 화면 그리기
+void DrawGLScene() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+
+    // 시점 변환
+    glTranslatef(0.0f, 0.0f, -10.0f);
+
+    // 바닥 그리기
+    glPushMatrix();
+    glColor3f(0.3f, 0.3f, 0.3f);
+    glTranslatef(0.0f, groundY - 0.5f, 0.0f);
+    glScalef(10.0f, 0.1f, 10.0f);
+    glutSolidCube(1.0f); // 바닥: 얇은 큐브
+    glPopMatrix();
+
+    // 공 그리기
+    glPushMatrix();
+    glTranslatef(ballX, ballY, 0.0f); // 공 위치
+    glScalef(scaleX, scaleY, 1.0f);  // 공 변형 (확대/축소)
+    glColor3f(1.0f, 0.0f, 0.0f);
+
+    if (wireframeMode)
+        glutWireSphere(1.0f, 20, 20); // 와이어프레임 공
+    else
+        glutSolidSphere(1.0f, 20, 20); // 솔리드 공
+    glPopMatrix();
+
+    glutSwapBuffers();
+}
+
+// 키보드 입력 처리
+void HandleKeyboard(unsigned char key, int x, int y) {
+    switch (key) {
+    case 'w': wireframeMode = !wireframeMode; break; // 와이어프레임 토글
+    case 's': wireframeMode = GL_FALSE; break;      // 솔리드 모드
+    case '+': gravity += 1.0f; break;              // 중력 증가
+    case '-': gravity -= 1.0f; break;              // 중력 감소
+    case 27: exit(0);                              // ESC 종료
+    }
+    glutPostRedisplay();
+}
+
+// 애니메이션 업데이트
+void UpdateAnimation(int value) {
+    UpdatePhysics();           // 물리 계산 업데이트
+    glutPostRedisplay();       // 화면 갱신 요청
+    glutTimerFunc(16, UpdateAnimation, 0); // 다음 업데이트 예약
+}
+
+// 메인 함수
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+    glutInitWindowSize(800, 600);
+    glutCreateWindow("Elastic Ball Animation");
+
+    InitGL(800, 600);
+    glutDisplayFunc(DrawGLScene);
+    glutReshapeFunc(ReSizeGLScene);
+    glutKeyboardFunc(HandleKeyboard);
+    glutTimerFunc(16, UpdateAnimation, 0);
+
+    glutMainLoop();
+    return 0;
+}
